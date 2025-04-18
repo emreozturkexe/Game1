@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2048 Game</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @keyframes appear {
+            0% {
+                opacity: 0;
+                transform: scale(0.5);
+            }
+            100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+        
+        @keyframes merge {
+            0% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.2);
+            }
+            100% {
+                transform: scale(1);
+            }
+        }
+        
+        .tile-new {
+            animation: appear 200ms ease 100ms;
+            animation-fill-mode: backwards;
+        }
+        
+        .tile-merged {
+            animation: merge 200ms ease 100ms;
+            animation-fill-mode: backwards;
+        }
+        
+        .game-container {
+            perspective: 1000px;
+        }
+        
+        .grid-container {
+            transform-style: preserve-3d;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen flex flex-col items-center justify-center font-sans">
+    <div class="container mx-auto px-4 py-8 max-w-md">
+        <div class="flex justify-between items-center mb-6">
+            <h1 class="text-4xl font-bold text-gray-800">2048</h1>
+            <div class="flex gap-2">
+                <button id="new-game-btn" class="bg-amber-500 hover:bg-amber-600 text-white font-bold py-2 px-4 rounded transition">
+                    <i class="fas fa-plus mr-1"></i> New Game
+                </button>
+                <button id="how-to-play-btn" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded transition">
+                    <i class="fas fa-question mr-1"></i> How to Play
+                </button>
+            </div>
+        </div>
+        
+        <div class="flex justify-between items-center mb-4">
+            <div class="bg-gray-200 rounded p-3 text-center w-24">
+                <div class="text-xs text-gray-600">SCORE</div>
+                <div id="score" class="text-xl font-bold">0</div>
+            </div>
+            <div class="bg-gray-200 rounded p-3 text-center w-24">
+                <div class="text-xs text-gray-600">BEST</div>
+                <div id="best-score" class="text-xl font-bold">0</div>
+            </div>
+        </div>
+        
+        <div class="game-container mb-6">
+            <div class="grid-container relative bg-gray-300 rounded-lg p-3 w-full aspect-square">
+                <div class="grid grid-cols-4 grid-rows-4 gap-3 w-full h-full">
+                    <!-- Background cells -->
+                    <div class="bg-gray-400 rounded-md"></div>
+                    <div class="bg-gray-400 rounded-md"></div>
+                    <div class="bg-gray-400 rounded-md"></div>
+                    <div class="bg-gray-400 rounded-md"></div>
+                    <div class="bg-gray-400 rounded-md"></div>
+                    <div class="bg-gray-400 rounded-md"></div>
+                    <div class="bg-gray-400 rounded-md"></div>
+                    <div class="bg-gray-400 rounded-md"></div>
+                    <div class="bg-gray-400 rounded-md"></div>
+                    <div class="bg-gray-400 rounded-md"></div>
+                    <div class="bg-gray-400 rounded-md"></div>
+                    <div class="bg-gray-400 rounded-md"></div>
+                    <div class="bg-gray-400 rounded-md"></div>
+                    <div class="bg-gray-400 rounded-md"></div>
+                    <div class="bg-gray-400 rounded-md"></div>
+                    <div class="bg-gray-400 rounded-md"></div>
+                </div>
+                
+                <!-- Tiles will be dynamically added here -->
+            </div>
+        </div>
+        
+        <div class="text-center text-gray-600 mb-4">
+            <p>Join the numbers and get to the <strong>2048 tile!</strong></p>
+        </div>
+        
+        <div class="flex justify-center gap-2 mb-6">
+            <button id="undo-btn" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded transition">
+                <i class="fas fa-undo mr-1"></i> Undo
+            </button>
+            <button id="theme-toggle" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded transition">
+                <i class="fas fa-moon mr-1"></i> Dark Mode
+            </button>
+        </div>
+    </div>
+    
+    <!-- Game Over Modal -->
+    <div id="game-over-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
+        <div class="bg-white rounded-lg p-6 max-w-sm w-full mx-4">
+            <h2 class="text-2xl font-bold mb-4 text-center">Game Over!</h2>
+            <p class="text-center mb-6">Your score: <span id="final-score" class="font-bold">0</span></p>
+            <div class="flex justify-center gap-4">
+                <button id="try-again-btn" class="bg-amber-500 hover:bg-amber-600 text-white font-bold py-2 px-6 rounded transition">
+                    Try Again
+                </button>
+                <button id="close-modal-btn" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded transition">
+                    Close
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- How to Play Modal -->
+    <div id="how-to-play-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
+        <div class="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <h2 class="text-2xl font-bold mb-4 text-center">How to Play 2048</h2>
+            <div class="space-y-4">
+                <p><strong>Goal:</strong> Combine tiles of the same number to reach the 2048 tile!</p>
+                <p><strong>Controls:</strong></p>
+                <ul class="list-disc pl-5 space-y-2">
+                    <li>Use <strong>arrow keys</strong> (↑, ↓, ←, →) or <strong>swipe</strong> on mobile to move tiles</li>
+                    <li>When two tiles with the same number touch, they <strong>merge into one</strong></li>
+                    <li>After each move, a new tile (either 2 or 4) appears in an empty spot</li>
+                    <li>The game ends when the board is full and no more moves are possible</li>
+                </ul>
+                <p><strong>Tip:</strong> Try to keep your highest number in a corner and build around it!</p>
+            </div>
+            <div class="mt-6 text-center">
+                <button id="close-how-to-play-btn" class="bg-amber-500 hover:bg-amber-600 text-white font-bold py-2 px-6 rounded transition">
+                    Got it!
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Game state
+            let grid = Array(4).fill().map(() => Array(4).fill(0));
+            let score = 0;
+            let bestScore = localStorage.getItem('bestScore') || 0;
+            let gameOver = false;
+            let history = [];
+            let isDarkMode = localStorage.getItem('darkMode') === 'true';
+            
+            // DOM elements
+            const gridContainer = document.querySelector('.grid-container');
+            const scoreElement = document.getElementById('score');
+            const bestScoreElement = document.getElementById('best-score');
+            const newGameBtn = document.getElementById('new-game-btn');
+            const undoBtn = document.getElementById('undo-btn');
+            const gameOverModal = document.getElementById('game-over-modal');
+            const tryAgainBtn = document.getElementById('try-again-btn');
+            const closeModalBtn = document.getElementById('close-modal-btn');
+            const finalScoreElement = document.getElementById('final-score');
+            const howToPlayBtn = document.getElementById('how-to-play-btn');
+            const howToPlayModal = document.getElementById('how-to-play-modal');
+            const closeHowToPlayBtn = document.getElementById('close-how-to-play-btn');
+            const themeToggle = document.getElementById('theme-toggle');
+            
+            // Initialize game
+            initGame();
+            
+            // Event listeners
+            newGameBtn.addEventListener('click', startNewGame);
+            undoBtn.addEventListener('click', undoMove);
+            tryAgainBtn.addEventListener('click', startNewGame);
+            closeModalBtn.addEventListener('click', () => gameOverModal.classList.add('hidden'));
+            howToPlayBtn.addEventListener('click', () => howToPlayModal.classList.remove('hidden'));
+            closeHowToPlayBtn.addEventListener('click', () => howToPlayModal.classList.add('hidden'));
+            themeToggle.addEventListener('click', toggleDarkMode);
+            
+            // Keyboard controls
+            document.addEventListener('keydown', handleKeyPress);
+            
+            // Touch controls for mobile
+            let touchStartX = 0;
+            let touchStartY = 0;
+            let touchEndX = 0;
+            let touchEndY = 0;
+            
+            gridContainer.addEventListener('touchstart', (e) => {
+                touchStartX = e.changedTouches[0].screenX;
+                touchStartY = e.changedTouches[0].screenY;
+            }, false);
+            
+            gridContainer.addEventListener('touchend', (e) => {
+                touchEndX = e.changedTouches[0].screenX;
+                touchEndY = e.changedTouches[0].screenY;
+                handleSwipe();
+            }, false);
+            
+            function initGame() {
+                // Set initial scores
+                scoreElement.textContent = score;
+                bestScoreElement.textContent = bestScore;
+                
+                // Apply dark mode if enabled
+                if (isDarkMode) {
+                    document.documentElement.classList.add('dark');
+                    themeToggle.innerHTML = '<i class="fas fa-sun mr-1"></i> Light Mode';
+                } else {
+                    document.documentElement.classList.remove('dark');
+                    themeToggle.innerHTML = '<i class="fas fa-moon mr-1"></i> Dark Mode';
+                }
+                
+                // Start new game
+                startNewGame();
+            }
+            
+            function startNewGame() {
+                // Reset game state
+                grid = Array(4).fill().map(() => Array(4).fill(0));
+                score = 0;
+                gameOver = false;
+                history = [];
+                
+                // Update UI
+                scoreElement.textContent = score;
+                gameOverModal.classList.add('hidden');
+                
+                // Clear existing tiles
+                document.querySelectorAll('.tile').forEach(tile => tile.remove());
+                
+                // Add two initial tiles
+                addRandomTile();
+                addRandomTile();
+                
+                // Render initial state
+                renderGrid();
+            }
+            
+            function addRandomTile() {
+                const emptyCells = [];
+                
+                // Find all empty cells
+                for (let row = 0; row < 4; row++) {
+                    for (let col = 0; col < 4; col++) {
+                        if (grid[row][col] === 0) {
+                            emptyCells.push({ row, col });
+                        }
+                    }
+                }
+                
+                // If there are empty cells, add a new tile
+                if (emptyCells.length > 0) {
+                    const { row, col } = emptyCells[Math.floor(Math.random() * emptyCells.length)];
+                    grid[row][col] = Math.random() < 0.9 ? 2 : 4;
+                    
+                    // Create and animate the new tile
+                    createTile(row, col, grid[row][col], true);
+                }
+            }
+            
+            function createTile(row, col, value, isNew = false) {
+                const tile = document.createElement('div');
+                tile.className = `tile absolute flex items-center justify-center font-bold rounded-md transition-all duration-100 ${isNew ? 'tile-new' : ''}`;
+                tile.dataset.row = row;
+                tile.dataset.col = col;
+                tile.dataset.value = value;
+                
+                // Set tile position and size
+                const tileSize = (gridContainer.clientWidth - 32) / 4; // 32px padding
+                const x = col * (tileSize + 12) + 12; // 12px gap
+                const y = row * (tileSize + 12) + 12;
+                
+                tile.style.width = `${tileSize}px`;
+                tile.style.height = `${tileSize}px`;
+                tile.style.left = `${x}px`;
+                tile.style.top = `${y}px`;
+                
+                // Set tile color based on value
+                const colors = {
+                    2: 'bg-amber-50 text-amber-800',
+                    4: 'bg-amber-100 text-amber-800',
+                    8: 'bg-amber-200 text-amber-900',
+                    16: 'bg-amber-300 text-amber-900',
+                    32: 'bg-amber-400 text-white',
+                    64: 'bg-amber-500 text-white',
+                    128: 'bg-amber-600 text-white',
+                    256: 'bg-amber-700 text-white',
+                    512: 'bg-amber-800 text-white',
+                    1024: 'bg-amber-900 text-white',
+                    2048: 'bg-yellow-500 text-white',
+                    4096: 'bg-purple-500 text-white',
+                    8192: 'bg-pink-500 text-white'
+                };
+                
+                const colorClass = colors[value] || 'bg-gray-800 text-white';
+                tile.classList.add(colorClass);
+                
+                // Set font size based on value length
+                if (value < 100) {
+                    tile.classList.add('text-4xl');
+                } else if (value < 1000) {
+                    tile.classList.add('text-3xl');
+                } else {
+                    tile.classList.add('text-2xl');
+                }
+                
+                tile.textContent = value;
+                gridContainer.appendChild(tile);
+                
+                return tile;
+            }
+            
+            function renderGrid() {
+                // Remove all existing tiles
+                document.querySelectorAll('.tile').forEach(tile => tile.remove());
+                
+                // Create tiles for all non-zero cells
+                for (let row = 0; row < 4; row++) {
+                    for (let col = 0; col < 4; col++) {
+                        if (grid[row][col] !== 0) {
+                            createTile(row, col, grid[row][col]);
+                        }
+                    }
+                }
+            }
+            
+            function handleKeyPress(e) {
+                if (gameOver) return;
+                
+                let moved = false;
+                
+                // Save current state for undo
+                const prevGrid = JSON.parse(JSON.stringify(grid));
+                const prevScore = score;
+                
+                switch (e.key) {
+                    case 'ArrowUp':
+                        moved = moveUp();
+                        break;
+                    case 'ArrowDown':
+                        moved = moveDown();
+                        break;
+                    case 'ArrowLeft':
+                        moved = moveLeft();
+                        break;
+                    case 'ArrowRight':
+                        moved = moveRight();
+                        break;
+                    default:
+                        return; // Ignore other keys
+                }
+                
+                if (moved) {
+                    // Save to history for undo
+                    history.push({ grid: prevGrid, score: prevScore });
+                    if (history.length > 10) history.shift(); // Limit history size
+                    
+                    // Add new tile and check game over
+                    addRandomTile();
+                    updateScore();
+                    
+                    if (isGameOver()) {
+                        gameOver = true;
+                        finalScoreElement.textContent = score;
+                        gameOverModal.classList.remove('hidden');
+                    }
+                }
+            }
+            
+            function handleSwipe() {
+                if (gameOver) return;
+                
+                const dx = touchEndX - touchStartX;
+                const dy = touchEndY - touchStartY;
+                
+                // Determine if the swipe was horizontal or vertical
+                if (Math.abs(dx) > Math.abs(dy)) {
+                    // Horizontal swipe
+                    if (dx > 0) {
+                        // Right swipe
+                        handleKeyPress({ key: 'ArrowRight' });
+                    } else {
+                        // Left swipe
+                        handleKeyPress({ key: 'ArrowLeft' });
+                    }
+                } else {
+                    // Vertical swipe
+                    if (dy > 0) {
+                        // Down swipe
+                        handleKeyPress({ key: 'ArrowDown' });
+                    } else {
+                        // Up swipe
+                        handleKeyPress({ key: 'ArrowUp' });
+                    }
+                }
+            }
+            
+            function moveUp() {
+                let moved = false;
+                
+                for (let col = 0; col < 4; col++) {
+                    // Combine tiles
+                    for (let row = 1; row < 4; row++) {
+                        if (grid[row][col] !== 0) {
+                            let currentRow = row;
+                            
+                            while (currentRow > 0) {
+                                if (grid[currentRow - 1][col] === 0) {
+                                    // Move to empty space
+                                    grid[currentRow - 1][col] = grid[currentRow][col];
+                                    grid[currentRow][col] = 0;
+                                    currentRow--;
+                                    moved = true;
+                                } else if (grid[currentRow - 1][col] === grid[currentRow][col]) {
+                                    // Merge tiles
+                                    grid[currentRow - 1][col] *= 2;
+                                    score += grid[currentRow - 1][col];
+                                    grid[currentRow][col] = 0;
+                                    moved = true;
+                                    break;
+                                } else {
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                if (moved) renderGrid();
+                return moved;
+            }
+            
+            function moveDown() {
+                let moved = false;
+                
+                for (let col = 0; col < 4; col++) {
+                    // Combine tiles
+                    for (let row = 2; row >= 0; row--) {
+                        if (grid[row][col] !== 0) {
+                            let currentRow = row;
+                            
+                            while (currentRow < 3) {
+                                if (grid[currentRow + 1][col] === 0) {
+                                    // Move to empty space
+                                    grid[currentRow + 1][col] = grid[currentRow][col];
+                                    grid[currentRow][col] = 0;
+                                    currentRow++;
+                                    moved = true;
+                                } else if (grid[currentRow + 1][col] === grid[currentRow][col]) {
+                                    // Merge tiles
+                                    grid[currentRow + 1][col] *= 2;
+                                    score += grid[currentRow + 1][col];
+                                    grid[currentRow][col] = 0;
+                                    moved = true;
+                                    break;
+                                } else {
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                if (moved) renderGrid();
+                return moved;
+            }
+            
+            function moveLeft() {
+                let moved = false;
+                
+                for (let row = 0; row < 4; row++) {
+                    // Combine tiles
+                    for (let col = 1; col < 4; col++) {
+                        if (grid[row][col] !== 0) {
+                            let currentCol = col;
+                            
+                            while (currentCol > 0) {
+                                if (grid[row][currentCol - 1] === 0) {
+                                    // Move to empty space
+                                    grid[row][currentCol - 1] = grid[row][currentCol];
+                                    grid[row][currentCol] = 0;
+                                    currentCol--;
+                                    moved = true;
+                                } else if (grid[row][currentCol - 1] === grid[row][currentCol]) {
+                                    // Merge tiles
+                                    grid[row][currentCol - 1] *= 2;
+                                    score += grid[row][currentCol - 1];
+                                    grid[row][currentCol] = 0;
+                                    moved = true;
+                                    break;
+                                } else {
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                if (moved) renderGrid();
+                return moved;
+            }
+            
+            function moveRight() {
+                let moved = false;
+                
+                for (let row = 0; row < 4; row++) {
+                    // Combine tiles
+                    for (let col = 2; col >= 0; col--) {
+                        if (grid[row][col] !== 0) {
+                            let currentCol = col;
+                            
+                            while (currentCol < 3) {
+                                if (grid[row][currentCol + 1] === 0) {
+                                    // Move to empty space
+                                    grid[row][currentCol + 1] = grid[row][currentCol];
+                                    grid[row][currentCol] = 0;
+                                    currentCol++;
+                                    moved = true;
+                                } else if (grid[row][currentCol + 1] === grid[row][currentCol]) {
+                                    // Merge tiles
+                                    grid[row][currentCol + 1] *= 2;
+                                    score += grid[row][currentCol + 1];
+                                    grid[row][currentCol] = 0;
+                                    moved = true;
+                                    break;
+                                } else {
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                if (moved) renderGrid();
+                return moved;
+            }
+            
+            function updateScore() {
+                scoreElement.textContent = score;
+                
+                if (score > bestScore) {
+                    bestScore = score;
+                    bestScoreElement.textContent = bestScore;
+                    localStorage.setItem('bestScore', bestScore);
+                }
+            }
+            
+            function isGameOver() {
+                // Check if there are any empty cells
+                for (let row = 0; row < 4; row++) {
+                    for (let col = 0; col < 4; col++) {
+                        if (grid[row][col] === 0) {
+                            return false;
+                        }
+                    }
+                }
+                
+                // Check if any adjacent tiles can be merged
+                for (let row = 0; row < 4; row++) {
+                    for (let col = 0; col < 4; col++) {
+                        const value = grid[row][col];
+                        
+                        // Check right neighbor
+                        if (col < 3 && grid[row][col + 1] === value) {
+                            return false;
+                        }
+                        
+                        // Check bottom neighbor
+                        if (row < 3 && grid[row + 1][col] === value) {
+                            return false;
+                        }
+                    }
+                }
+                
+                return true;
+            }
+            
+            function undoMove() {
+                if (history.length === 0) return;
+                
+                const lastState = history.pop();
+                grid = lastState.grid;
+                score = lastState.score;
+                
+                scoreElement.textContent = score;
+                renderGrid();
+                gameOver = false;
+                gameOverModal.classList.add('hidden');
+            }
+            
+            function toggleDarkMode() {
+                isDarkMode = !isDarkMode;
+                localStorage.setItem('darkMode', isDarkMode);
+                
+                if (isDarkMode) {
+                    document.documentElement.classList.add('dark');
+                    themeToggle.innerHTML = '<i class="fas fa-sun mr-1"></i> Light Mode';
+                } else {
+                    document.documentElement.classList.remove('dark');
+                    themeToggle.innerHTML = '<i class="fas fa-moon mr-1"></i> Dark Mode';
+                }
+            }
+        });
+    </script>
+</body>
+</html>
